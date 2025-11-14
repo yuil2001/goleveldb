@@ -54,7 +54,7 @@ func setFileLock(f *os.File, readOnly, lock bool) error {
 		if readOnly {
 			how = syscall.LOCK_SH
 		} else {
-			how = syscall.LOCK_EX
+			how = syscall.F_WRLCK
 		}
 	}
 	return syscall.Flock(int(f.Fd()), how|syscall.LOCK_NB)
