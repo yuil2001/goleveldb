@@ -483,8 +483,13 @@ func (t *tOps) remove(fd storage.FileDesc) {
 		if t.evictRemoved && t.blockCache != nil {
 			t.blockCache.EvictNS(uint64(fd.Num))
 		}
-		// Try to reuse file num, useful for discarded transaction.
-		t.s.reuseFileNum(fd.Num)
+		// Do not reuse the file number of a removed table. The block cache is
+		// namespaced by file number and is not evicted here unless
+		// BlockCacheEvictRemoved is set, so a new table that reused this number
+		// would be served the removed table's cached blocks. Reads then miss
+		// live keys, and compaction (which also looks up the cache) writes the
+		// stale block into its output: live keys are lost and deleted keys
+		// come back.
 	})
 }
 
