@@ -198,18 +198,13 @@ func (db *DB) getFrozenMem() *memDB {
 // Drop frozen memdb; assume that frozen memdb isn't nil.
 func (db *DB) dropFrozenMem() {
 	db.memMu.Lock()
-	fd, frozen := db.frozenJournalFd, db.frozenMem
-	db.memMu.Unlock()
-	// journal 파일을 지우는 동안 reader가 memMu를 기다리지 않게 한다.
-	// 다음 rotation은 이 compaction worker가 끝나기를 기다리므로 frozenMem은 삭제가 끝날 때까지 유지한다.
-	if err := db.s.stor.Remove(fd); err != nil {
-		db.logf("journal@remove removing @%d %q", fd.Num, err)
+	if err := db.s.stor.Remove(db.frozenJournalFd); err != nil {
+		db.logf("journal@remove removing @%d %q", db.frozenJournalFd.Num, err)
 	} else {
-		db.logf("journal@remove removed @%d", fd.Num)
+		db.logf("journal@remove removed @%d", db.frozenJournalFd.Num)
 	}
-	db.memMu.Lock()
 	db.frozenJournalFd = storage.FileDesc{}
-	frozen.decref()
+	db.frozenMem.decref()
 	db.frozenMem = nil
 	db.memMu.Unlock()
 }
