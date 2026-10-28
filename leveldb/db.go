@@ -704,7 +704,10 @@ func (db *DB) recoverJournalRO() error {
 			if jr == nil {
 				jr = journal.NewReader(fr, dropper{db.s, fd}, strict, checksum)
 			} else {
-				if err := jr.Reset(fr, dropper{db.s, fd}, strict, checksum); err != nil {
+				// Reset reports the previous journal's final error. EOF is its
+				// normal terminator, not a failure to open this journal.
+				if err := jr.Reset(fr, dropper{db.s, fd}, strict, checksum); err != nil && err != io.EOF {
+					fr.Close()
 					return err
 				}
 			}
