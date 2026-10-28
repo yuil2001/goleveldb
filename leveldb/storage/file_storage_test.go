@@ -12,6 +12,7 @@ import (
 	"math/rand"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 )
@@ -370,11 +371,17 @@ func TestFileStorage_ReadOnlyLocking(t *testing.T) {
 	if err != nil {
 		t.Fatal("OpenFile(1): got error: ", err)
 	}
+	defer p1.Close()
 
-	_, err = OpenFile(temp, true)
-	if err != nil {
-		t.Logf("OpenFile(2): got error: %s (expected)", err)
-	} else {
+	p2, err := OpenFile(temp, true)
+	if p2 != nil {
+		defer p2.Close()
+	}
+	if runtime.GOOS == "windows" {
+		if err != nil {
+			t.Fatal("OpenFile(2): reader beside writer: ", err)
+		}
+	} else if err == nil {
 		t.Fatal("OpenFile(2): expect error")
 	}
 
@@ -384,17 +391,24 @@ func TestFileStorage_ReadOnlyLocking(t *testing.T) {
 	if err != nil {
 		t.Fatal("OpenFile(3): got error: ", err)
 	}
+	defer p3.Close()
 
 	p4, err := OpenFile(temp, true)
 	if err != nil {
 		t.Fatal("OpenFile(4): got error: ", err)
 	}
+	defer p4.Close()
 
-	_, err = OpenFile(temp, false)
-	if err != nil {
-		t.Logf("OpenFile(5): got error: %s (expected)", err)
-	} else {
-		t.Fatal("OpenFile(2): expect error")
+	p5, err := OpenFile(temp, false)
+	if p5 != nil {
+		defer p5.Close()
+	}
+	if runtime.GOOS == "windows" {
+		if err != nil {
+			t.Fatal("OpenFile(5): writer beside readers: ", err)
+		}
+	} else if err == nil {
+		t.Fatal("OpenFile(5): expect error")
 	}
 
 	p3.Close()
